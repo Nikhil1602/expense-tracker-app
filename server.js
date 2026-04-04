@@ -5,6 +5,7 @@ const cors = require("cors");
 const sequelize = require("./utils/db");
 const expenseRoutes = require("./routes/expenseRoutes");
 const userRoutes = require("./routes/userRoutes");
+const orderRoutes = require("./routes/orderRoutes");
 
 require("./models");
 
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/expense", expenseRoutes);
+app.use("/api/order", orderRoutes);
 app.use("/api/user", userRoutes);
 
 app.use((req, res) => {
