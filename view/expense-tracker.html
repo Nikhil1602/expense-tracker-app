@@ -185,6 +185,57 @@
 
         window.addEventListener("DOMContentLoaded", fetchExpenses);
 
+        // ✅ DELETE & EDIT
+        list.addEventListener("click", async (e) => {
+
+            const id = e.target.dataset.id;
+
+            // DELETE
+            if (e.target.classList.contains("delete")) {
+
+                try {
+
+                    await axios.delete(`${API}/expense/${id}`, authConfig);
+
+                    expenses = expenses.filter(exp => exp.id != id);
+                    filteredExpenses = filteredExpenses.filter(exp => exp.id != id);
+
+                    const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+
+                    if (currentPage > totalPages) {
+                        currentPage = totalPages || 1;
+                    }
+
+                    render();
+                    updateTotal(filteredExpenses);
+
+                } catch (err) {
+
+                    console.error(err);
+
+                }
+
+            }
+
+            // EDIT
+            if (e.target.classList.contains("edit")) {
+
+                const id = e.target.dataset.id;
+                const exp = expenses.find(e => e.id == id);
+
+                form.name.value = exp.name;
+                form.amount.value = exp.amount;
+                form.category.value = exp.category;
+                form.date.value = exp.date;
+
+                // 🔥 store id for update
+                editId = id;
+                submitBtn.innerText = "Update";
+
+            }
+
+        });
+
         document.getElementById("pageSize").addEventListener("change", (e) => {
 
             itemsPerPage = parseInt(e.target.value);
