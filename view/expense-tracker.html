@@ -118,6 +118,8 @@
                     </table>
                 </div>
 
+                <div class="d-flex justify-content-center mt-3" id="pagination"></div>
+
                 <!-- TOTAL -->
                 <h5 class="text-end">Total: ₹<span id="total">0</span></h5>
 
@@ -153,8 +155,12 @@
         const token = localStorage.getItem("token");
 
         let expenses = [];
+        let filteredExpenses = [];
         let editId = null;
         let isPremiumUser = false;
+
+        let currentPage = 1;
+        const itemsPerPage = 10;
 
         if (!token) {
             alert("Please login first");
@@ -162,344 +168,164 @@
         }
 
         const authConfig = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
         };
 
-        // 🔥 LOAD DATA ON PAGE LOAD
         window.addEventListener("DOMContentLoaded", fetchExpenses);
 
-        async function showLeaderboard() {
-
-            try {
-
-                document.getElementById("leaderboardSection").style.display = "block";
-
-                const res = await axios.get(`${API}/premium/leaderboard`, authConfig);
-                const users = res.data;
-
-                const list = document.getElementById("leaderboardList");
-                list.innerHTML = "";
-
-                // const currentUserId = JSON.parse(atob(token.split('.')[1])).userId;
-
-                users.forEach((user, index) => {
-                    list.innerHTML += `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${user.name}</td>
-                            <td class="amount-col text-center" style="color: red;">₹${Number(user.totalExpense).toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
-
-            } catch (err) {
-
-                console.error(err);
-
-            }
-
-        }
-
-        function handlePremiumUI() {
-
-            const premiumSection = document.getElementById("premiumFeatures");
-            const premiumBtn = document.getElementById("buyPremium");
-
-            if (isPremiumUser) {
-                premiumBtn.style.display = "none";
-                premiumSection.classList.remove("d-none");
-                showLeaderboard();
-            } else {
-                premiumBtn.style.display = "block";
-                premiumSection.classList.add("d-none");
-            }
-
-        }
-
-        // ✅ GET ALL EXPENSES
         async function fetchExpenses() {
-
             try {
+                currentPage = 1;
 
                 const res = await axios.get(`${API}/expense`, authConfig);
+
                 expenses = res.data.expenses;
+                filteredExpenses = [...expenses]; // 🔥 important
+
                 isPremiumUser = res.data.isPremium;
 
-                const today = new Date().toISOString().split("T")[0];
-                document.getElementById("date").value = today;
+                document.getElementById("date").value =
+                    new Date().toISOString().split("T")[0];
 
-                render(expenses);
-                updateTotal(expenses);
+                render();
+                updateTotal(filteredExpenses);
                 handlePremiumUI();
 
             } catch (err) {
-
                 console.error(err);
-
             }
-
         }
 
-        // ✅ ADD EXPENSE
-        form.addEventListener("submit", async (e) => {
-
-            e.preventDefault();
-
-            const expense = {
-                name: form.name.value,
-                amount: parseFloat(form.amount.value),
-                category: form.category.value,
-                date: form.date.value
-            };
-
-            try {
-
-                if (editId) {
-                    // 🔥 UPDATE API
-                    await axios.put(`${API}/expense/${editId}`, expense, authConfig);
-
-                    editId = null;
-                } else {
-                    // CREATE
-                    await axios.post(`${API}/expense`, expense, authConfig);
-                }
-
-                form.reset();
-                editId = null;
-
-                // 🔥 reset button text
-                submitBtn.innerText = "Add";
-
-                fetchExpenses();
-
-            } catch (err) {
-
-                console.error(err);
-
-            }
-
-        });
-
-        // ✅ DELETE & EDIT
-        list.addEventListener("click", async (e) => {
-
-            const id = e.target.dataset.id;
-
-            // DELETE
-            if (e.target.classList.contains("delete")) {
-                try {
-                    await axios.delete(`${API}/expense/${id}`, authConfig);
-                    expenses = expenses.filter(exp => exp.id != id);
-                    render(expenses);
-                    updateTotal(expenses);
-                } catch (err) {
-                    console.error(err);
-                }
-            }
-
-            // EDIT
-            if (e.target.classList.contains("edit")) {
-
-                const id = e.target.dataset.id;
-                const exp = expenses.find(e => e.id == id);
-
-                form.name.value = exp.name;
-                form.amount.value = exp.amount;
-                form.category.value = exp.category;
-                form.date.value = exp.date;
-
-                // 🔥 store id for update
-                editId = id;
-                submitBtn.innerText = "Update";
-
-            }
-
-        });
-
-        // ✅ FILTER
-        filter.addEventListener("change", () => {
-
-            if (filter.value === "All") {
-                render(expenses);
-                updateTotal(expenses);
-            } else {
-                const filtered = expenses.filter(e => e.category === filter.value);
-                render(filtered);
-                updateTotal(filtered);
-            }
-
-        });
-
-        // ✅ RENDER
-        function render(data) {
-
+        function render() {
             list.innerHTML = "";
 
-            if (!data.length) {
+            if (!filteredExpenses.length) {
                 list.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No expenses yet 🚀</td></tr>`;
                 return;
             }
 
-            const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const start = (currentPage - 1) * itemsPerPage;
+            const paginatedData = filteredExpenses.slice(start, start + itemsPerPage);
+
+            const sorted = [...paginatedData].sort(
+                (a, b) => new Date(b.date) - new Date(a.date)
+            );
 
             sorted.forEach(exp => {
                 list.innerHTML += `
-                    <tr>
-                        <td>${exp.name}</td>
-                        <td>₹${Number(exp.amount).toFixed(2)}</td>
-                        <td>${exp.category}</td>
-                        <td>${formatDate(exp.date)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning edit" data-id="${exp.id}">Edit</button>
-                            <button class="btn btn-sm btn-danger delete" data-id="${exp.id}">Delete</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        // DELETE ALL
-        async function deleteAllExpenses() {
-
-            if (!confirm("Delete all expenses?")) return;
-            await axios.delete(`${API}/expense`, authConfig);
-            fetchExpenses();
-
-        }
-
-        // ✅ TOTAL
-        function updateTotal(data) {
-            const total = data.reduce((sum, e) => sum + Number(e.amount), 0);
-            totalEl.textContent = total.toFixed(2);
-        }
-
-        function formatDate(dateStr) {
-
-            const date = new Date(dateStr);
-
-            const day = String(date.getDate()).padStart(2, "0");
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const year = date.getFullYear();
-
-            return `${day}-${month}-${year}`;
-
-        }
-
-        function logout() {
-
-            localStorage.removeItem("token");
-            window.location.href = "./login.html";
-
-        }
-
-        const handleBuyPremium = async () => {
-
-            const res = await axios.get(`${API}/order/create-order`, authConfig);
-
-            const { paymentSessionId, orderId } = res.data;
-            const cashfree = Cashfree({ mode: "sandbox" });
-
-            await cashfree.checkout({
-                paymentSessionId,
-                redirectTarget: "_self"
+                <tr>
+                    <td>${exp.name}</td>
+                    <td>₹${Number(exp.amount).toFixed(2)}</td>
+                    <td>${exp.category}</td>
+                    <td>${formatDate(exp.date)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning edit" data-id="${exp.id}">Edit</button>
+                        <button class="btn btn-sm btn-danger delete" data-id="${exp.id}">Delete</button>
+                    </td>
+                </tr>
+            `;
             });
 
-        };
+            setupPagination();
+        }
 
-        document.getElementById("name").addEventListener("blur", async () => {
+        function setupPagination() {
+            const pagination = document.getElementById("pagination");
+            pagination.innerHTML = "";
 
-            const text = document.getElementById("name").value;
+            const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
 
-            if (!text) return;
+            if (totalPages <= 1) return; // 🔥 fix: don't show if not needed
 
-            try {
-
-                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
-                const category = res.data.category;
-
-                // 🔥 Auto select category
-                document.getElementById("category").value = res.data.category;
-
-            } catch (err) {
-
-                console.error(err);
-
+            if (currentPage > 1) {
+                pagination.innerHTML += `
+                <button class="btn btn-secondary mx-1" onclick="changePage(${currentPage - 1})">Prev</button>
+            `;
             }
 
+            for (let i = 1; i <= totalPages; i++) {
+                pagination.innerHTML += `
+                <button class="btn ${i === currentPage ? 'btn-warning' : 'btn-secondary'} mx-1"
+                    onclick="changePage(${i})">${i}</button>
+            `;
+            }
+
+            if (currentPage < totalPages) {
+                pagination.innerHTML += `
+                <button class="btn btn-secondary mx-1" onclick="changePage(${currentPage + 1})">Next</button>
+            `;
+            }
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            render();
+        }
+
+        // CATEGORY FILTER
+        filter.addEventListener("change", () => {
+            currentPage = 1;
+
+            if (filter.value === "All") {
+                filteredExpenses = [...expenses];
+            } else {
+                filteredExpenses = expenses.filter(e => e.category === filter.value);
+            }
+
+            render();
+            updateTotal(filteredExpenses);
+        });
+
+        // TIME FILTER
+        document.getElementById("timeFilter").addEventListener("change", () => {
+            applyTimeFilter();
         });
 
         function applyTimeFilter() {
+            currentPage = 1;
 
-            const filterType = document.getElementById("timeFilter").value;
+            const type = document.getElementById("timeFilter").value;
             const now = new Date();
 
-            let filtered = expenses;
+            filteredExpenses = [...expenses];
 
-            if (filterType === "daily") {
-                filtered = expenses.filter(e => {
-                    const d = new Date(e.date);
-                    return d.toDateString() === now.toDateString();
-                });
+            if (type === "daily") {
+                filteredExpenses = expenses.filter(e =>
+                    new Date(e.date).toDateString() === now.toDateString()
+                );
             }
 
-            if (filterType === "weekly") {
+            if (type === "weekly") {
                 const start = new Date();
                 start.setDate(now.getDate() - 7);
 
-                filtered = expenses.filter(e => {
+                filteredExpenses = expenses.filter(e => {
                     const d = new Date(e.date);
                     return d >= start && d <= now;
                 });
             }
 
-            if (filterType === "monthly") {
-                filtered = expenses.filter(e => {
+            if (type === "monthly") {
+                filteredExpenses = expenses.filter(e => {
                     const d = new Date(e.date);
                     return d.getMonth() === now.getMonth() &&
                         d.getFullYear() === now.getFullYear();
                 });
             }
 
-            render(filtered);
-            updateTotal(filtered);
+            render();
+            updateTotal(filteredExpenses);
         }
 
-        document.getElementById("timeFilter").addEventListener("change", () => {
-            applyTimeFilter();
-        });
-
-        function downloadExpenses() {
-
-            if (!isPremiumUser) {
-                alert("Only premium users can download");
-                return;
-            }
-
-            if (!expenses.length) {
-                alert("No data to download");
-                return;
-            }
-
-            let csv = "Name,Amount,Category,Date\n";
-
-            expenses.forEach(e => {
-                csv += `${e.name},${e.amount},${e.category},${e.date}\n`;
-            });
-
-            const blob = new Blob([csv], { type: "text/csv" });
-            const url = window.URL.createObjectURL(blob);
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "expenses.csv";
-            a.click();
-
-            window.URL.revokeObjectURL(url);
-
+        function updateTotal(data) {
+            const total = data.reduce((sum, e) => sum + Number(e.amount), 0);
+            totalEl.textContent = total.toFixed(2);
         }
 
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+        }
     </script>
 
 </body>
