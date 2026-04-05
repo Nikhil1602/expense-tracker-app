@@ -386,6 +386,28 @@
 
         };
 
+        document.getElementById("name").addEventListener("blur", async () => {
+
+            const text = document.getElementById("name").value;
+
+            if (!text) return;
+
+            try {
+
+                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
+                const category = res.data.category;
+
+                // 🔥 Auto select category
+                document.getElementById("category").value = res.data.category;
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        });
+
     </script>
 
 </body>

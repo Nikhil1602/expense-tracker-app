@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^1.48.0",
     "bcrypt": "^6.0.0",
     "cashfree-pg": "^5.1.0",
     "cors": "^2.8.6",

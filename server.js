@@ -7,6 +7,7 @@ const expenseRoutes = require("./routes/expenseRoutes");
 const userRoutes = require("./routes/userRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const premiumRoutes = require("./routes/premiumRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 require("./models");
 
@@ -24,6 +25,7 @@ app.use("/api/expense", expenseRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/premium", premiumRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use((req, res) => {
     res.status(404).send("Page not found");
