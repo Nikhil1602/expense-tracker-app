@@ -73,7 +73,9 @@
                 </form>
 
                 <!-- FILTER -->
-                <div class="d-flex justify-content-end mb-3">
+
+
+                <div class="d-flex justify-content-between mb-2 gap-2">
                     <select id="filter" class="form-select w-auto">
                         <option value="All">All</option>
                         <option>Food</option>
@@ -81,6 +83,16 @@
                         <option>Entertainment</option>
                         <option>Other</option>
                     </select>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label>Show:</label>
+                        <select id="pageSize" class="form-select w-auto">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="40">40</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="premiumFeatures" class="d-none mt-3 mb-3">
@@ -160,7 +172,7 @@
         let isPremiumUser = false;
 
         let currentPage = 1;
-        const itemsPerPage = 10;
+        let itemsPerPage = 5;
 
         if (!token) {
             alert("Please login first");
@@ -173,9 +185,31 @@
 
         window.addEventListener("DOMContentLoaded", fetchExpenses);
 
+        document.getElementById("pageSize").addEventListener("change", (e) => {
+
+            itemsPerPage = parseInt(e.target.value);
+
+            // 💾 Save preference
+            localStorage.setItem("pageSize", itemsPerPage);
+
+            // 🔄 Reset page (important)
+            currentPage = 1;
+
+            render();
+        });
+
         async function fetchExpenses() {
+
             try {
+
                 currentPage = 1;
+
+                const savedPageSize = localStorage.getItem("pageSize");
+
+                if (savedPageSize) {
+                    itemsPerPage = parseInt(savedPageSize);
+                    document.getElementById("pageSize").value = savedPageSize;
+                }
 
                 const res = await axios.get(`${API}/expense`, authConfig);
 
