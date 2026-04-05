@@ -83,6 +83,25 @@
                     </select>
                 </div>
 
+                <div id="premiumFeatures" class="d-none mt-3 mb-3">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <select id="timeFilter" class="form-select w-auto">
+                            <option value="all">All Time</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+
+                        <button class="btn btn-success" onclick="downloadExpenses()">
+                            Download Expenses
+                        </button>
+
+                    </div>
+
+                </div>
+
                 <!-- TABLE -->
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -185,13 +204,16 @@
 
         function handlePremiumUI() {
 
+            const premiumSection = document.getElementById("premiumFeatures");
             const premiumBtn = document.getElementById("buyPremium");
 
             if (isPremiumUser) {
                 premiumBtn.style.display = "none";
+                premiumSection.classList.remove("d-none");
                 showLeaderboard();
             } else {
                 premiumBtn.style.display = "block";
+                premiumSection.classList.add("d-none");
             }
 
         }
@@ -407,6 +429,76 @@
             }
 
         });
+
+        function applyTimeFilter() {
+
+            const filterType = document.getElementById("timeFilter").value;
+            const now = new Date();
+
+            let filtered = expenses;
+
+            if (filterType === "daily") {
+                filtered = expenses.filter(e => {
+                    const d = new Date(e.date);
+                    return d.toDateString() === now.toDateString();
+                });
+            }
+
+            if (filterType === "weekly") {
+                const start = new Date();
+                start.setDate(now.getDate() - 7);
+
+                filtered = expenses.filter(e => {
+                    const d = new Date(e.date);
+                    return d >= start && d <= now;
+                });
+            }
+
+            if (filterType === "monthly") {
+                filtered = expenses.filter(e => {
+                    const d = new Date(e.date);
+                    return d.getMonth() === now.getMonth() &&
+                        d.getFullYear() === now.getFullYear();
+                });
+            }
+
+            render(filtered);
+            updateTotal(filtered);
+        }
+
+        document.getElementById("timeFilter").addEventListener("change", () => {
+            applyTimeFilter();
+        });
+
+        function downloadExpenses() {
+
+            if (!isPremiumUser) {
+                alert("Only premium users can download");
+                return;
+            }
+
+            if (!expenses.length) {
+                alert("No data to download");
+                return;
+            }
+
+            let csv = "Name,Amount,Category,Date\n";
+
+            expenses.forEach(e => {
+                csv += `${e.name},${e.amount},${e.category},${e.date}\n`;
+            });
+
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "expenses.csv";
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+
+        }
 
     </script>
 
