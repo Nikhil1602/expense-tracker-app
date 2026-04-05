@@ -59,14 +59,27 @@
 
         <h3 class="title">🚀 Login</h3>
 
+        <div id="forgotSection" style="display:none;">
+            <input id="forgotEmail" type="email" class="form-control mb-2" placeholder="Enter your email">
+
+            <button onclick="sendResetLink()" class="btn btn-warning w-100">
+                Send Reset Link
+            </button>
+        </div>
+
         <input id="email" type="email" class="form-control mb-3" placeholder="Email">
         <input id="password" type="password" class="form-control mb-3" placeholder="Password">
+        <p id="forgot-password" class="text-end">
+            <a href="#" onclick="showForgotPassword()" style="font-size: 14px;">
+                Forgot Password?
+            </a>
+        </p>
 
-        <button onclick="login()" class="btn btn-custom w-100">
+        <button id="login-btn" onclick="login()" class="btn btn-custom w-100">
             Login
         </button>
 
-        <a href="./signup.html" class="d-block text-center mt-3" style="color: #667eea;">
+        <a id="switch-link" href="./signup.html" class="d-block text-center mt-3" style="color: #667eea;">
             Don't have an account? Sign up here
         </a>
 
@@ -113,6 +126,35 @@
                 message.innerHTML = err.response?.data?.message || "❌ Login failed";
                 message.style.color = "red";
 
+            }
+
+        }
+
+        function showForgotPassword() {
+
+            document.getElementById("forgotSection").style.display = "block";
+            document.getElementById("email").style.display = "none";
+            document.getElementById("password").style.display = "none";
+            document.getElementById("login-btn").style.display = "none";
+            document.getElementById("switch-link").style.display = "none !important";
+            document.getElementById("forgot-password").style.display = "none";
+            document.getElementsByClassName("title")[0].innerText = "🔒 Forgot Password";
+
+        }
+
+        async function sendResetLink() {
+
+            const email = document.getElementById("forgotEmail").value;
+
+            try {
+
+                const res = await axios.post(`${API}/forgot-password`, { email });
+
+                alert("Reset link sent to your email");
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to send email");
             }
 
         }
