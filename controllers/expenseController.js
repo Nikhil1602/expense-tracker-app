@@ -1,24 +1,30 @@
 const UserExpenses = require("../models/Expense");
 const User = require("../models/User");
+const sequelize = require("../utils/db");
 
 exports.createExpense = async (req, res) => {
+
+    const transaction = await sequelize.transaction();
 
     try {
 
         const expense = await UserExpenses.create({
             ...req.body,
             userId: req.user.userId
-        });
+        }, { transaction });
 
         await User.increment(
             { totalExpense: req.body.amount },
-            { where: { id: req.user.userId } }
+            { where: { id: req.user.userId }, transaction }
         );
 
+        await transaction.commit();
         return res.status(201).json(expense);
+
 
     } catch (err) {
 
+        await transaction.rollback();
         return res.status(500).json({ error: err.message });
 
     }
@@ -75,6 +81,8 @@ exports.getExpenseById = async (req, res) => {
 
 exports.updateExpense = async (req, res) => {
 
+    const transaction = await sequelize.transaction();
+
     try {
 
         const expense = await UserExpenses.findOne({
@@ -82,7 +90,7 @@ exports.updateExpense = async (req, res) => {
                 id: req.params.id,
                 userId: req.user.userId
             }
-        });
+        }, { transaction });
 
         if (!expense) return res.status(404).json({ message: "Not found" });
 
@@ -93,15 +101,17 @@ exports.updateExpense = async (req, res) => {
 
         await User.increment(
             { totalExpense: difference },
-            { where: { id: req.user.userId } }
+            { where: { id: req.user.userId }, transaction }
         );
 
-        await expense.update(req.body);
+        await expense.update(req.body, { transaction });
 
+        await transaction.commit();
         return res.json(expense);
 
     } catch (err) {
 
+        await transaction.rollback();
         return res.status(500).json({ error: err.message });
 
     }
@@ -110,6 +120,8 @@ exports.updateExpense = async (req, res) => {
 
 exports.deleteExpense = async (req, res) => {
 
+    const transaction = await sequelize.transaction();
+
     try {
 
         const expense = await UserExpenses.findOne({
@@ -117,20 +129,22 @@ exports.deleteExpense = async (req, res) => {
                 id: req.params.id,
                 userId: req.user.userId
             }
-        });
+        }, { transaction });
 
         if (!expense) return res.status(404).json({ message: "Not found" });
 
         await User.decrement(
             { totalExpense: expense.amount },
-            { where: { id: req.user.userId } }
+            { where: { id: req.user.userId }, transaction }
         );
 
         await expense.destroy();
+        await transaction.commit();
         return res.json({ message: "Deleted successfully" });
 
     } catch (err) {
 
+        await transaction.rollback();
         return res.status(500).json({ error: err.message });
 
     }
@@ -139,21 +153,25 @@ exports.deleteExpense = async (req, res) => {
 
 exports.deleteAllExpenses = async (req, res) => {
 
+    const transaction = await sequelize.transaction();
+
     try {
 
         await UserExpenses.destroy({
             where: { userId: req.user.userId },
-        });
+        }, { transaction });
 
         await User.update(
             { totalExpense: 0 },
-            { where: { id: req.user.userId } }
+            { where: { id: req.user.userId }, transaction }
         );
 
+        await transaction.commit();
         return res.json({ message: "All expenses deleted successfully" });
 
     } catch (err) {
 
+        await transaction.rollback();
         return res.status(500).json({ error: err.message });
 
     }

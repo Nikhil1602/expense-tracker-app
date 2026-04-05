@@ -31,7 +31,7 @@ app.use((req, res) => {
     res.status(404).send("Page not found");
 });
 
-sequelize.sync({ alter: true, force: true }).then(() => {
+sequelize.sync({ alter: true }).then(() => {
     console.log("DB synced");
     app.listen(process.env.PORT, () => console.log("Server running"));
 });
