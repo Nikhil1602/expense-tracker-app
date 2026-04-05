@@ -1,10 +1,6 @@
-require('dotenv').config();
 const bcrypt = require("bcrypt");
-const crypto = require("crypto");
 const Users = require("../models/User");
 const jwt = require("jsonwebtoken");
-const emailApi = require('../utils/email');
-const { Op } = require('sequelize');
 
 // Create User
 exports.createUser = async (req, res) => {
@@ -162,87 +158,6 @@ exports.getUserById = async (req, res) => {
 
         console.error("FULL ERROR:", err); // 👈 IMPORTANT
         return res.status(500).json({ error: err.message });
-
-    }
-
-};
-
-// Forgot Password
-exports.forgotPassword = async (req, res) => {
-
-    const { email } = req.body;
-
-    try {
-
-        const user = await Users.findOne({ where: { email } });
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        const token = crypto.randomBytes(32).toString("hex");
-
-        user.resetToken = token;
-        user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
-        await user.save();
-
-        const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
-
-        await emailApi.sendTransacEmail({
-            sender: { email: process.env.SENDER_EMAIL },
-            to: [{ email }],
-            subject: "Reset Your Password",
-            htmlContent: `
-                <h3>Password Reset</h3>
-                <p>Click below to reset:</p>
-                <a href="${resetLink}">Reset Password</a>
-            `
-        });
-
-        return res.json({ message: "Reset link sent to email" });
-
-    } catch (err) {
-
-        console.log(err);
-        return res.status(500).json({ error: "Something failed" });
-
-    }
-
-};
-
-// Reset Password
-exports.resetPassword = async (req, res) => {
-
-    const { token, password } = req.body;
-
-    try {
-
-        const user = await Users.findOne({
-            where: {
-                resetToken: token,
-                resetTokenExpiry: {
-                    [Op.gt]: new Date()
-                }
-            }
-        });
-
-        if (!user) {
-            return res.status(400).json({ message: "Invalid or expired token" });
-        }
-
-        user.password = await bcrypt.hash(password, 10);
-        user.resetToken = null;
-        user.resetTokenExpiry = null;
-
-        await user.save();
-
-        return res.json({ message: "Password reset successful" });
-
-    } catch (err) {
-
-        console.log(err);
-
-        return res.status(500).json({ error: "Failed" });
 
     }
 
