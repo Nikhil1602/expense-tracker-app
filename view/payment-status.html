@@ -13,7 +13,7 @@
 
     <style>
         body {
-            background: #f5f7fa;
+            background: #0066ff;
             height: 100vh;
             display: flex;
             align-items: center;
@@ -41,7 +41,7 @@
         <p id="message" class="text-muted">Please wait while we verify your transaction.</p>
 
         <button id="btn" class="btn btn-primary mt-3 d-none">
-            Go to Dashboard
+            Go to App
         </button>
     </div>
 
@@ -50,6 +50,7 @@
         const title = document.getElementById("title");
         const message = document.getElementById("message");
         const btn = document.getElementById("btn");
+        const token = localStorage.getItem("token");
 
         const orderId = new URLSearchParams(window.location.search).get("order_id");
 
@@ -68,6 +69,7 @@
                 const res = await axios.post(ORDER_API + "/verify-payment", { orderId }, authConfig);
 
                 if (res.data.success) {
+
                     // ✅ SUCCESS
                     icon.innerHTML = "✅";
                     icon.classList.remove("text-secondary");

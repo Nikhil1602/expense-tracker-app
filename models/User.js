@@ -23,6 +23,14 @@ const Users = sequelize.define("Users", {
         validate: {
             notEmpty: true
         }
+    },
+    isPremium: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    totalExpense: {
+        type: DataTypes.FLOAT,
+        defaultValue: 0
     }
 
 }, {

@@ -1,4 +1,5 @@
 const UserExpenses = require("../models/Expense");
+const User = require("../models/User");
 
 exports.createExpense = async (req, res) => {
 
@@ -8,6 +9,11 @@ exports.createExpense = async (req, res) => {
             ...req.body,
             userId: req.user.userId
         });
+
+        await User.increment(
+            { totalExpense: req.body.amount },
+            { where: { id: req.user.userId } }
+        );
 
         return res.status(201).json(expense);
 
@@ -28,7 +34,13 @@ exports.getExpenses = async (req, res) => {
             order: [["date", "DESC"]],
         });
 
-        return res.json(expenses);
+        const user = await User.findByPk(req.user.userId);
+
+        return res.json({
+            expenses,
+            isPremium: user.isPremium,
+            totalExpense: user.totalExpense
+        });
 
     } catch (err) {
 
@@ -74,6 +86,16 @@ exports.updateExpense = async (req, res) => {
 
         if (!expense) return res.status(404).json({ message: "Not found" });
 
+        const oldAmount = expense.amount;
+        const newAmount = req.body.amount;
+
+        const difference = newAmount - oldAmount;
+
+        await User.increment(
+            { totalExpense: difference },
+            { where: { id: req.user.userId } }
+        );
+
         await expense.update(req.body);
 
         return res.json(expense);
@@ -99,6 +121,11 @@ exports.deleteExpense = async (req, res) => {
 
         if (!expense) return res.status(404).json({ message: "Not found" });
 
+        await User.decrement(
+            { totalExpense: expense.amount },
+            { where: { id: req.user.userId } }
+        );
+
         await expense.destroy();
         return res.json({ message: "Deleted successfully" });
 
@@ -117,6 +144,11 @@ exports.deleteAllExpenses = async (req, res) => {
         await UserExpenses.destroy({
             where: { userId: req.user.userId },
         });
+
+        await User.update(
+            { totalExpense: 0 },
+            { where: { id: req.user.userId } }
+        );
 
         return res.json({ message: "All expenses deleted successfully" });
 

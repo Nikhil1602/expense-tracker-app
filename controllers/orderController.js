@@ -11,15 +11,15 @@ exports.createOrder = async (req, res) => {
         const orderId = "order_" + Date.now();
 
         const request = {
-            order_amount: 499, // premium price
+            order_amount: 499,
             order_currency: "INR",
             order_id: orderId,
             customer_details: {
                 customer_id: `user_${req.user.userId}`,
-                customer_phone: "9999999999" // can store real number
+                customer_phone: "9876543210" // can store real number
             },
             order_meta: {
-                return_url: `http://localhost:3000/payment-status?order_id=${orderId}`
+                return_url: `http://localhost:3000/payment-status.html?order_id=${orderId}`
             }
         };
 
@@ -29,7 +29,8 @@ exports.createOrder = async (req, res) => {
         await Order.create({
             id: orderId,
             status: "PENDING",
-            userId: req.user.userId
+            userId: req.user.userId,
+            amount: 499
         });
 
         return res.json({
@@ -52,20 +53,35 @@ exports.verifyPayment = async (req, res) => {
 
     try {
 
+        const order = await Order.findOne({ where: { id: orderId } });
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+
+        // 🔥 prevent duplicate updates
+        if (order.status === "SUCCESSFUL") {
+            return res.json({ success: true });
+        }
+
         const response = await cashfree.PGOrderFetchPayments(orderId);
+
+        if (!response.data || response.data.length === 0) {
+            return res.json({ success: false });
+        }
 
         const payment = response.data[0]; // latest payment
 
         if (payment.payment_status === "SUCCESS") {
 
             await Order.update(
-                { status: "SUCCESSFUL" },
+                { status: "SUCCESSFUL", paymentId: payment.cf_payment_id },
                 { where: { id: orderId } }
             );
 
             await User.update(
                 { isPremium: true },
-                { where: { id: req.user.userId } }
+                { where: { id: order.userId } }
             );
 
             return res.json({ success: true });
@@ -73,7 +89,7 @@ exports.verifyPayment = async (req, res) => {
         } else {
 
             await Order.update(
-                { status: "FAILED" },
+                { status: "FAILED", paymentId: payment.cf_payment_id },
                 { where: { id: orderId } }
             );
 

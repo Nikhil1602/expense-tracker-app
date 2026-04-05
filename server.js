@@ -6,6 +6,7 @@ const sequelize = require("./utils/db");
 const expenseRoutes = require("./routes/expenseRoutes");
 const userRoutes = require("./routes/userRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const premiumRoutes = require("./routes/premiumRoutes");
 
 require("./models");
 
@@ -22,12 +23,13 @@ app.get("/", (req, res) => {
 app.use("/api/expense", expenseRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/premium", premiumRoutes);
 
 app.use((req, res) => {
     res.status(404).send("Page not found");
 });
 
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync({ alter: true, force: true }).then(() => {
     console.log("DB synced");
     app.listen(process.env.PORT, () => console.log("Server running"));
 });

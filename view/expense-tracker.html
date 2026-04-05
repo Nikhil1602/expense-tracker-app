@@ -16,6 +16,12 @@
             font-family: cursive, Times, serif;
             box-sizing: border-box;
         }
+
+        .amount-col {
+            width: 150px;
+            white-space: nowrap;
+            text-align: right;
+        }
     </style>
 </head>
 
@@ -97,12 +103,28 @@
                 <h5 class="text-end">Total: ₹<span id="total">0</span></h5>
 
             </div>
+
+            <div id="leaderboardSection" class="m-3" style="display:none;">
+                <h4>🏆 Leaderboard</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th class="amount-col text-center">Total Expense</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardList"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
-        const API = `http://localhost:3000/api/expense`;
-        const ORDER_API = `http://localhost:3000/api/order`;
+        const API = `http://localhost:3000/api`;
 
         const form = document.getElementById("expense-form");
         const list = document.getElementById("list");
@@ -113,6 +135,7 @@
 
         let expenses = [];
         let editId = null;
+        let isPremiumUser = false;
 
         if (!token) {
             alert("Please login first");
@@ -125,24 +148,69 @@
             }
         };
 
-        const cashfree = Cashfree({
-            mode: "sandbox",
-        });
-
         // 🔥 LOAD DATA ON PAGE LOAD
         window.addEventListener("DOMContentLoaded", fetchExpenses);
+
+        async function showLeaderboard() {
+
+            try {
+
+                document.getElementById("leaderboardSection").style.display = "block";
+
+                const res = await axios.get(`${API}/premium/leaderboard`, authConfig);
+                const users = res.data;
+
+                const list = document.getElementById("leaderboardList");
+                list.innerHTML = "";
+
+                // const currentUserId = JSON.parse(atob(token.split('.')[1])).userId;
+
+                users.forEach((user, index) => {
+                    list.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${user.name}</td>
+                            <td class="amount-col text-center" style="color: red;">₹${Number(user.totalExpense).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        }
+
+        function handlePremiumUI() {
+
+            const premiumBtn = document.getElementById("buyPremium");
+
+            if (isPremiumUser) {
+                premiumBtn.style.display = "none";
+                showLeaderboard();
+            } else {
+                premiumBtn.style.display = "block";
+            }
+
+        }
 
         // ✅ GET ALL EXPENSES
         async function fetchExpenses() {
 
             try {
 
-                const res = await axios.get(API, authConfig);
-                expenses = res.data;
+                const res = await axios.get(`${API}/expense`, authConfig);
+                expenses = res.data.expenses;
+                isPremiumUser = res.data.isPremium;
+
                 const today = new Date().toISOString().split("T")[0];
                 document.getElementById("date").value = today;
+
                 render(expenses);
                 updateTotal(expenses);
+                handlePremiumUI();
 
             } catch (err) {
 
@@ -168,12 +236,12 @@
 
                 if (editId) {
                     // 🔥 UPDATE API
-                    await axios.put(`${API}/${editId}`, expense, authConfig);
+                    await axios.put(`${API}/expense/${editId}`, expense, authConfig);
 
                     editId = null;
                 } else {
                     // CREATE
-                    await axios.post(API, expense, authConfig);
+                    await axios.post(`${API}/expense`, expense, authConfig);
                 }
 
                 form.reset();
@@ -200,7 +268,7 @@
             // DELETE
             if (e.target.classList.contains("delete")) {
                 try {
-                    await axios.delete(`${API}/${id}`, authConfig);
+                    await axios.delete(`${API}/expense/${id}`, authConfig);
                     expenses = expenses.filter(exp => exp.id != id);
                     render(expenses);
                     updateTotal(expenses);
@@ -274,7 +342,7 @@
         async function deleteAllExpenses() {
 
             if (!confirm("Delete all expenses?")) return;
-            await axios.delete(API, authConfig);
+            await axios.delete(`${API}/expense`, authConfig);
             fetchExpenses();
 
         }
@@ -306,32 +374,15 @@
 
         const handleBuyPremium = async () => {
 
-            const res = await axios.get(`${ORDER_API}/create-order`, authConfig);
+            const res = await axios.get(`${API}/order/create-order`, authConfig);
 
             const { paymentSessionId, orderId } = res.data;
-
-            const cashfree = Cashfree({
-                mode: "sandbox"
-            });
+            const cashfree = Cashfree({ mode: "sandbox" });
 
             await cashfree.checkout({
                 paymentSessionId,
                 redirectTarget: "_self"
             });
-
-        };
-
-        const verifyPayment = async () => {
-
-            const orderId = new URLSearchParams(window.location.search).get("order_id");
-
-            const res = await axios.post(`${ORDER_API}/verify-payment`, { orderId }, authConfig);
-
-            if (res.data.success) {
-                alert("Transaction Successful");
-            } else {
-                alert("TRANSACTION FAILED");
-            }
 
         };
 
