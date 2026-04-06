@@ -1,4 +1,5 @@
 const genAI = require("../utils/gemini");
+const logger = require("../utils/logger");
 
 exports.categorizeExpense = async (req, res) => {
 
@@ -25,12 +26,14 @@ exports.categorizeExpense = async (req, res) => {
         // 🔥 Clean output
         category = category.replace(/[^a-zA-Z]/g, "");
 
-        res.json({ category });
+        return res.json({ category });
 
     } catch (err) {
 
-        console.log(err);
-        res.status(500).json({ error: "AI failed" });
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE CATEGORIZE EXPENSE THROUGH AI: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ error: "AI failed" });
 
     }
 

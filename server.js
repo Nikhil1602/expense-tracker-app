@@ -9,6 +9,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const premiumRoutes = require("./routes/premiumRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const passwordRoutes = require("./routes/passwordRoutes");
+const logger = require('./utils/logger');
 
 require("./models");
 
@@ -33,7 +34,38 @@ app.use((req, res) => {
     res.status(404).send("Page not found");
 });
 
-sequelize.sync({ alter: true }).then(() => {
-    console.log("DB synced");
-    app.listen(process.env.PORT, () => console.log("Server running"));
+// sequelize.sync({ alter: true }).then(() => {
+//     console.log("DB synced");
+//     app.listen(process.env.PORT, () => console.log("Server running"));
+// });
+
+process.on("unhandledRejection", (err) => {
+    console.error("🔥 Unhandled Rejection:", err);
 });
+
+process.on("uncaughtException", (err) => {
+    console.error("🔥 Uncaught Exception:", err);
+});
+
+(async () => {
+
+    try {
+
+        await sequelize.sync({ alter: true });
+
+        logger.info("✅ Database synced");
+
+        app.listen(process.env.PORT, () => {
+            logger.info(`🚀 Server running on port ${process.env.PORT}`);
+        });
+
+    } catch (err) {
+
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE SYNCING DB: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        process.exit(1);
+
+    }
+
+})();

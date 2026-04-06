@@ -1,6 +1,7 @@
 const UserExpenses = require("../models/Expense");
 const User = require("../models/User");
 const sequelize = require("../utils/db");
+const logger = require("../utils/logger");
 
 exports.createExpense = async (req, res) => {
 
@@ -25,6 +26,9 @@ exports.createExpense = async (req, res) => {
     } catch (err) {
 
         await transaction.rollback();
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE CREATING EXPENSE: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -50,6 +54,9 @@ exports.getExpenses = async (req, res) => {
 
     } catch (err) {
 
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE GETTING EXPENSES: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -73,6 +80,9 @@ exports.getExpenseById = async (req, res) => {
 
     } catch (err) {
 
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE GETTING EXPENSE BY ID: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -111,6 +121,9 @@ exports.updateExpense = async (req, res) => {
 
     } catch (err) {
 
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE UPDATING EXPENSE: ${err.stack || err.message}`);
+        logger.error("========================================>");
         await transaction.rollback();
         return res.status(500).json({ error: err.message });
 
@@ -145,6 +158,9 @@ exports.deleteExpense = async (req, res) => {
     } catch (err) {
 
         await transaction.rollback();
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE DELETING EXPENSE: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -172,6 +188,9 @@ exports.deleteAllExpenses = async (req, res) => {
     } catch (err) {
 
         await transaction.rollback();
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE DELETING ALL EXPENSES: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }

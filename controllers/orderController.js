@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const User = require("../models/User");
 const { Cashfree, CFEnvironment } = require("cashfree-pg");
+const logger = require("../utils/logger");
 
 const cashfree = new Cashfree(CFEnvironment.SANDBOX, process.env.APP_ID, process.env.APP_SECRET_KEY);
 
@@ -40,8 +41,10 @@ exports.createOrder = async (req, res) => {
 
     } catch (err) {
 
-        console.log(err);
-        res.status(500).json({ error: "Order creation failed" });
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE CREATING ORDER: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ error: "Order creation failed" });
 
     }
 
@@ -99,8 +102,10 @@ exports.verifyPayment = async (req, res) => {
 
     } catch (err) {
 
-        console.log(err);
-        res.status(500).json({ error: "Verification failed" });
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE VERIFYING ORDER: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ error: "Verification failed" });
 
     }
 

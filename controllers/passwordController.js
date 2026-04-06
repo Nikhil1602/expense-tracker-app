@@ -6,6 +6,7 @@ const emailApi = require('../utils/email');
 const { Op } = require('sequelize');
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
+const logger = require('../utils/logger');
 
 // Forgot Password
 exports.forgotPassword = async (req, res) => {
@@ -53,7 +54,9 @@ exports.forgotPassword = async (req, res) => {
 
     } catch (err) {
 
-        console.log(err);
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE FORGOT PASSWORD: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: "Something failed" });
 
     }
@@ -107,7 +110,9 @@ exports.resetPassword = async (req, res) => {
 
     } catch (err) {
 
-        console.log(err);
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE RESET PASSWORD: ${err.stack || err.message}`);
+        logger.error("========================================>");
 
         return res.status(500).json({ error: "Failed" });
 

@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const logger = require("../utils/logger");
 
 exports.getLeaderboard = async (req, res) => {
 
@@ -15,12 +16,14 @@ exports.getLeaderboard = async (req, res) => {
             order: [["totalExpense", "DESC"]]
         });
 
-        res.json(users);
+        return res.json(users);
 
     } catch (err) {
 
-        console.log(err);
-        res.status(500).json({ error: "Failed" });
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE GETTING LEADERBOARD: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ error: "Failed" });
 
     }
 

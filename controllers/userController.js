@@ -1,54 +1,78 @@
 const bcrypt = require("bcrypt");
 const Users = require("../models/User");
 const jwt = require("jsonwebtoken");
+const logger = require("../utils/logger");
 
 // Create User
 exports.createUser = async (req, res) => {
 
-    const { name, email, password } = req.body;
+    try {
 
-    const existingUser = await Users.findOne({ where: { email } });
+        const { name, email, password } = req.body;
+        const existingUser = await Users.findOne({ where: { email } });
 
-    if (existingUser) {
-        return res.status(400).json({ error: "User already registered" });
+        if (existingUser) {
+            return res.status(400).json({ error: "User already registered" });
+        }
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: "Name, email and password are required" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await Users.create({ ...req.body, password: hashedPassword });
+        return res.json(user);
+
+    } catch (err) {
+
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE CREATING USER: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ message: "Something went wrong!" })
+
     }
 
-    if (!name || !email || !password) {
-        return res.status(400).json({ error: "Name, email and password are required" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await Users.create({ ...req.body, password: hashedPassword });
-    return res.json(user);
 
 };
 
 // Login User
 exports.login = async (req, res) => {
 
-    const { email, password } = req.body;
+    try {
 
-    const user = await Users.findOne({ where: { email } });
+        const { email, password } = req.body;
 
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        const user = await Users.findOne({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        // 🔐 Generate token
+        const token = jwt.sign(
+            { userId: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        return res.json({ message: "Login successful", token });
+
+    } catch (err) {
+
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE LOGIN: ${err.stack || err.message}`);
+        logger.error("========================================>");
+        return res.status(500).json({ message: "Login Failed " });
+
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-        return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // 🔐 Generate token
-    const token = jwt.sign(
-        { userId: user.id },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-    );
-
-    return res.json({ message: "Login successful", token });
 
 };
 
@@ -63,11 +87,13 @@ exports.getUsers = async (req, res) => {
             return res.status(404).json({ error: "No Users found" });
         }
 
-        res.json(users);
+        return res.json(users);
 
     } catch (err) {
 
-        console.error("FULL ERROR:", err); // 👈 IMPORTANT
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE GET USERS: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -90,7 +116,9 @@ exports.updateUser = async (req, res) => {
 
     } catch (err) {
 
-        console.error("FULL ERROR:", err); // 👈 IMPORTANT
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE UPDATING USER: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -111,7 +139,9 @@ exports.deleteAllUsers = async (req, res) => {
 
     } catch (err) {
 
-        console.error("FULL ERROR:", err); // 👈 IMPORTANT
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE DELETING ALL USERS: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -134,7 +164,9 @@ exports.deleteUserById = async (req, res) => {
 
     } catch (err) {
 
-        console.error("FULL ERROR:", err); // 👈 IMPORTANT
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE DELETING USER BY ID: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
@@ -156,7 +188,9 @@ exports.getUserById = async (req, res) => {
 
     } catch (err) {
 
-        console.error("FULL ERROR:", err); // 👈 IMPORTANT
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE GETTING USER BY ID: ${err.stack || err.message}`);
+        logger.error("========================================>");
         return res.status(500).json({ error: err.message });
 
     }
