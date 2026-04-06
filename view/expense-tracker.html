@@ -45,7 +45,7 @@
 
                 <!-- FORM -->
                 <form id="expense-form" class="row g-2 mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <input type="text" id="name" class="form-control" placeholder="Expense Name" required>
                     </div>
 
@@ -63,7 +63,11 @@
                         </select>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <input type="text" id="note" class="form-control" placeholder="Note (optional)">
+                    </div>
+
+                    <div class="col-md-2">
                         <input type="date" id="date" class="form-control" required>
                     </div>
 
@@ -122,6 +126,7 @@
                                 <th>Name</th>
                                 <th>Amount</th>
                                 <th>Category</th>
+                                <th>Note</th>
                                 <th>Date</th>
                                 <th>Action</th>
                             </tr>
@@ -185,6 +190,97 @@
 
         window.addEventListener("DOMContentLoaded", fetchExpenses);
 
+        async function showLeaderboard() {
+
+            try {
+
+                document.getElementById("leaderboardSection").style.display = "block";
+
+                const res = await axios.get(`${API}/premium/leaderboard`, authConfig);
+                const users = res.data;
+
+                const list = document.getElementById("leaderboardList");
+                list.innerHTML = "";
+
+                users.forEach((user, index) => {
+                    list.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${user.name}</td>
+                            <td class="amount-col text-center" style="color: red;">₹${Number(user.totalExpense).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        }
+
+        document.getElementById("name").addEventListener("blur", async () => {
+
+            const text = document.getElementById("name").value;
+
+            if (!text) return;
+
+            try {
+
+                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
+                const category = res.data.category;
+
+                document.getElementById("category").value = res.data.category;
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        });
+
+        // ✅ ADD EXPENSE
+        form.addEventListener("submit", async (e) => {
+
+            e.preventDefault();
+
+            const expense = {
+                name: form.name.value,
+                amount: parseFloat(form.amount.value),
+                category: form.category.value,
+                date: form.date.value,
+                note: form.note.value
+            };
+
+            try {
+
+                if (editId) {
+                    // 🔥 UPDATE API
+                    await axios.put(`${API}/expense/${editId}`, expense, authConfig);
+
+                    editId = null;
+                } else {
+                    // CREATE
+                    await axios.post(`${API}/expense`, expense, authConfig);
+                }
+
+                form.reset();
+                editId = null;
+
+                submitBtn.innerText = "Add";
+
+                fetchExpenses();
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
+        });
+
         // ✅ DELETE & EDIT
         list.addEventListener("click", async (e) => {
 
@@ -227,6 +323,7 @@
                 form.amount.value = exp.amount;
                 form.category.value = exp.category;
                 form.date.value = exp.date;
+                form.note.value = exp.note;
 
                 // 🔥 store id for update
                 editId = id;
@@ -248,6 +345,51 @@
 
             render();
         });
+
+        function logout() {
+
+            localStorage.removeItem("token");
+            window.location.href = "./login.html";
+
+        }
+
+        async function deleteAllExpenses() {
+
+            if (!confirm("Delete all expenses?")) return;
+            await axios.delete(`${API}/expense`, authConfig);
+            fetchExpenses();
+
+        }
+
+        function handlePremiumUI() {
+
+            const premiumSection = document.getElementById("premiumFeatures");
+            const premiumBtn = document.getElementById("buyPremium");
+
+            if (isPremiumUser) {
+                premiumBtn.style.display = "none";
+                premiumSection.classList.remove("d-none");
+                showLeaderboard();
+            } else {
+                premiumBtn.style.display = "block";
+                premiumSection.classList.add("d-none");
+            }
+
+        }
+
+        async function handleBuyPremium() {
+
+            const res = await axios.get(`${API}/order/create-order`, authConfig);
+
+            const { paymentSessionId, orderId } = res.data;
+            const cashfree = Cashfree({ mode: "sandbox" });
+
+            await cashfree.checkout({
+                paymentSessionId,
+                redirectTarget: "_self"
+            });
+
+        };
 
         async function fetchExpenses() {
 
@@ -282,6 +424,7 @@
         }
 
         function render() {
+
             list.innerHTML = "";
 
             if (!filteredExpenses.length) {
@@ -302,6 +445,7 @@
                     <td>${exp.name}</td>
                     <td>₹${Number(exp.amount).toFixed(2)}</td>
                     <td>${exp.category}</td>
+                    <td>${exp.note || "-"}</td>
                     <td>${formatDate(exp.date)}</td>
                     <td>
                         <button class="btn btn-sm btn-warning edit" data-id="${exp.id}">Edit</button>
@@ -312,9 +456,11 @@
             });
 
             setupPagination();
+
         }
 
         function setupPagination() {
+
             const pagination = document.getElementById("pagination");
             pagination.innerHTML = "";
 
@@ -340,6 +486,7 @@
                 <button class="btn btn-secondary mx-1" onclick="changePage(${currentPage + 1})">Next</button>
             `;
             }
+
         }
 
         function changePage(page) {
@@ -359,6 +506,28 @@
 
             render();
             updateTotal(filteredExpenses);
+        });
+
+        document.getElementById("name").addEventListener("blur", async () => {
+
+            const text = document.getElementById("name").value;
+
+            if (!text) return;
+
+            try {
+
+                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
+                const category = res.data.category;
+
+                // 🔥 Auto select category
+                document.getElementById("category").value = res.data.category;
+
+            } catch (err) {
+
+                console.error(err);
+
+            }
+
         });
 
         // TIME FILTER
@@ -411,6 +580,37 @@
             const d = new Date(dateStr);
             return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
         }
+
+        function downloadExpenses() {
+
+            if (!isPremiumUser) {
+                alert("Only premium users can download");
+                return;
+            }
+
+            if (!expenses.length) {
+                alert("No data to download");
+                return;
+            }
+
+            let csv = "Name,Amount,Category,Note,Date\n";
+
+            expenses.forEach(e => {
+                csv += `${e.name},${e.amount},${e.category},${e.note || ""},${e.date}\n`;
+            });
+
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "expenses.csv";
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+
+        }
+
     </script>
 
 </body>
