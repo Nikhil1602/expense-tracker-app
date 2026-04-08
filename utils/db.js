@@ -1,8 +1,9 @@
 require('dotenv').config();
 
 const { Sequelize } = require('sequelize');
+const logger = require("./logger");
 
-const USER = process.env.USER;
+const USER = process.env.DB_USER;
 const PASSWORD = process.env.PASSWORD;
 const HOST = process.env.HOST;
 const DB = process.env.DB;
@@ -22,7 +23,7 @@ const sequelize = new Sequelize(DB, USER, PASSWORD, {
     } catch (err) {
 
         console.log(err);
-
+        logger.error(err.stack || err.message);
     }
 
 })();
