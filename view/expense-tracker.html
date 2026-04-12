@@ -163,13 +163,13 @@
 
     <script>
         const API = `http://localhost:3000/api`;
+        axios.defaults.withCredentials = true;
 
         const form = document.getElementById("expense-form");
         const list = document.getElementById("list");
         const totalEl = document.getElementById("total");
         const filter = document.getElementById("filter");
         const submitBtn = document.getElementById("submitBtn");
-        const token = localStorage.getItem("token");
 
         let expenses = [];
         let filteredExpenses = [];
@@ -179,16 +179,30 @@
         let currentPage = 1;
         let itemsPerPage = 5;
 
-        if (!token) {
-            alert("Please login first");
-            window.location.href = "./login.html";
-        }
 
-        const authConfig = {
-            headers: { Authorization: `Bearer ${token}` }
-        };
+        axios.interceptors.response.use(res => res, err => {
+            if (err.response?.status === 401) {
+                if (!window.location.pathname.includes("login.html")) {
+                    alert("Session expired. Please login again.");
+                    window.location.href = "./login.html";
+                }
+            }
+            return Promise.reject(err);
+        });
 
-        window.addEventListener("DOMContentLoaded", fetchExpenses);
+        window.addEventListener("DOMContentLoaded", async () => {
+
+            try {
+
+                await fetchExpenses();
+
+            } catch (err) {
+
+                console.log(err);
+
+            }
+
+        });
 
         async function showLeaderboard() {
 
@@ -196,7 +210,7 @@
 
                 document.getElementById("leaderboardSection").style.display = "block";
 
-                const res = await axios.get(`${API}/premium/leaderboard`, authConfig);
+                const res = await axios.get(`${API}/premium/leaderboard`);
                 const users = res.data;
 
                 const list = document.getElementById("leaderboardList");
@@ -228,7 +242,7 @@
 
             try {
 
-                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
+                const res = await axios.post(`${API}/ai/categorize`, { text });
                 const category = res.data.category;
 
                 document.getElementById("category").value = res.data.category;
@@ -258,12 +272,12 @@
 
                 if (editId) {
                     // 🔥 UPDATE API
-                    await axios.put(`${API}/expense/${editId}`, expense, authConfig);
+                    await axios.put(`${API}/expense/${editId}`, expense);
 
                     editId = null;
                 } else {
                     // CREATE
-                    await axios.post(`${API}/expense`, expense, authConfig);
+                    await axios.post(`${API}/expense`, expense);
                 }
 
                 form.reset();
@@ -291,7 +305,7 @@
 
                 try {
 
-                    await axios.delete(`${API}/expense/${id}`, authConfig);
+                    await axios.delete(`${API}/expense/${id}`);
 
                     expenses = expenses.filter(exp => exp.id != id);
                     filteredExpenses = filteredExpenses.filter(exp => exp.id != id);
@@ -346,9 +360,9 @@
             render();
         });
 
-        function logout() {
+        async function logout() {
 
-            localStorage.removeItem("token");
+            await axios.post(`${API}/user/logout`);
             window.location.href = "./login.html";
 
         }
@@ -356,7 +370,7 @@
         async function deleteAllExpenses() {
 
             if (!confirm("Delete all expenses?")) return;
-            await axios.delete(`${API}/expense`, authConfig);
+            await axios.delete(`${API}/expense`);
             fetchExpenses();
 
         }
@@ -379,7 +393,7 @@
 
         async function handleBuyPremium() {
 
-            const res = await axios.get(`${API}/order/create-order`, authConfig);
+            const res = await axios.get(`${API}/order/create-order`);
 
             const { paymentSessionId, orderId } = res.data;
             const cashfree = Cashfree({ mode: "sandbox" });
@@ -404,7 +418,7 @@
                     document.getElementById("pageSize").value = savedPageSize;
                 }
 
-                const res = await axios.get(`${API}/expense`, authConfig);
+                const res = await axios.get(`${API}/expense`);
 
                 expenses = res.data.expenses;
                 filteredExpenses = [...expenses]; // 🔥 important
@@ -506,28 +520,6 @@
 
             render();
             updateTotal(filteredExpenses);
-        });
-
-        document.getElementById("name").addEventListener("blur", async () => {
-
-            const text = document.getElementById("name").value;
-
-            if (!text) return;
-
-            try {
-
-                const res = await axios.post(`${API}/ai/categorize`, { text }, authConfig);
-                const category = res.data.category;
-
-                // 🔥 Auto select category
-                document.getElementById("category").value = res.data.category;
-
-            } catch (err) {
-
-                console.error(err);
-
-            }
-
         });
 
         // TIME FILTER

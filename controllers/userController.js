@@ -62,6 +62,13 @@ exports.login = async (req, res) => {
             { expiresIn: "1h" }
         );
 
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: false, // ⚠️ true in production (HTTPS)
+            sameSite: "Lax",
+            maxAge: 60 * 60 * 1000 // 1 hour
+        });
+
         return res.json({ message: "Login successful", token });
 
     } catch (err) {
@@ -195,4 +202,23 @@ exports.getUserById = async (req, res) => {
 
     }
 
+};
+
+exports.logout = async (req, res) => {
+
+    try {
+
+        res.clearCookie("token");
+
+        return res.json({ message: "Logged out successfully" });
+
+    } catch (err) {
+
+        logger.error("========================================>");
+        logger.error(`ERROR WHILE LOGOUT: ${err.stack || err.message}`);
+        logger.error("========================================>");
+
+        return res.status(500).json({ message: "Logout failed" });
+
+    }
 };
